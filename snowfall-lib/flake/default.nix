@@ -174,6 +174,10 @@ rec {
           inherit package-namespace;
           extra-overlays = full-flake-options.overlays or [ ];
         };
+        channels.nixpkgs-stable.overlaysBuilder = snowfall-lib.overlay.create-overlays-builder {
+          inherit package-namespace;
+          extra-overlays = full-flake-options.overlays or [ ];
+        };
 
         outputsBuilder = outputs-builder;
 

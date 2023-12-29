@@ -347,7 +347,7 @@ in
         extra-special-args-module
         snowfall-user-home-module
       ]
-      ++ (users.modules or [ ])
+      # ++ (users.modules or [ ])
       ++ shared-modules
       ++ system-modules;
   };

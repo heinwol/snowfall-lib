@@ -332,7 +332,11 @@ in
                   users.${user-name} = mkAliasAndWrapDefinitions wrap-user-options options.snowfallorg.user;
 
                   # sharedModules = other-modules ++ optional config.snowfallorg.user.${user-name}.home.enable wrapped-user-module;
-                  sharedModules = other-modules ++ optional config.snowfallorg.user.${user-name}.home.enable user-module;
+                  sharedModules =
+                    other-modules
+                    ++ (optional config.snowfallorg.user.${user-name}.home.enable user-module)
+                    ++ (users.modules or [ ])
+                  ;
                 };
               };
             }
@@ -343,7 +347,7 @@ in
         extra-special-args-module
         snowfall-user-home-module
       ]
-      ++ (users.modules or [ ])
+      # ++ (users.modules or [ ])
       ++ shared-modules
       ++ system-modules;
   };

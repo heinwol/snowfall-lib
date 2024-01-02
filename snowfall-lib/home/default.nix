@@ -23,10 +23,13 @@ let
     mkAliasDefinitions
     mkAliasAndWrapDefinitions
     mkOption
-    types;
+    types
+    debug;
 
   user-homes-root = snowfall-lib.fs.get-snowfall-file "homes";
   user-modules-root = snowfall-lib.fs.get-snowfall-file "modules";
+  traceitN = N: val: debug.traceSeqN N val val;
+  tracemsgN = msg: N: val: builtins.trace msg (traceitN N val);
 in
 {
   home = rec {
@@ -332,10 +335,11 @@ in
                   users.${user-name} = mkAliasAndWrapDefinitions wrap-user-options options.snowfallorg.user;
 
                   # sharedModules = other-modules ++ optional config.snowfallorg.user.${user-name}.home.enable wrapped-user-module;
-                  sharedModules =
-                    other-modules
-                    ++ (optional config.snowfallorg.user.${user-name}.home.enable user-module)
-                    ++ (users.modules or [ ])
+                  sharedModules = # tracemsgN "SharedModules:" 4
+                    (other-modules
+                      ++ (optional config.snowfallorg.user.${user-name}.home.enable user-module)
+                      ++ (users.modules or [ ])
+                    )
                   ;
                 };
               };
@@ -343,12 +347,13 @@ in
           )
           (builtins.attrNames created-users);
       in
-      [
+      # tracemsgN "All modules:" 5
+      ([
         extra-special-args-module
         snowfall-user-home-module
       ]
-      # ++ (users.modules or [ ])
+      # ++ (tracemsgN "user.modules:" 1 (users.modules or [ ]))
       ++ shared-modules
-      ++ system-modules;
+      ++ system-modules);
   };
 }

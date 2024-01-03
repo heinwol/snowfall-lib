@@ -34,10 +34,10 @@ in
 {
   home = rec {
     # Modules in home-manager expect `hm` to be available directly on `lib` itself.
-    home-lib =
+    home-lib-gen = hm-input-name:
       # @NOTE(jakehamilton): This prevents an error during evaluation if the input does
       # not exist.
-      if user-inputs ? home-manager then
+      if user-inputs ? ${hm-input-name} then
         snowfall-lib.internal.system-lib.extend
           (final: prev:
             # @NOTE(jakehamilton): This order is important, this library's extend and other utilities must write
@@ -94,15 +94,17 @@ in
       , specialArgs ? { }
       , channelName ? "nixpkgs"
       , system ? "x86_64-linux"
+      , hm-input-name ? "home-manager"
       }:
       let
         user-metadata = split-user-and-host name;
 
         # @NOTE(jakehamilton): home-manager has trouble with `pkgs` recursion if it isn't passed in here.
+        home-lib = home-lib-gen hm-input-name;
         pkgs = user-inputs.self.pkgs.${system}.${channelName} // { lib = home-lib; };
         lib = home-lib;
       in
-      assert assertMsg (user-inputs ? home-manager) "In order to create home-manager configurations, you must include `home-manager` as a flake input.";
+      assert assertMsg (user-inputs ? ${hm-input-name}) "In order to create home-manager configurations, you must include `home-manager` as a flake input.";
       assert assertMsg (user-metadata.host != "") "Snowfall Lib homes must be named with the format: user@system";
       {
         inherit channelName system;
@@ -127,7 +129,7 @@ in
         };
 
         builder = args:
-          user-inputs.home-manager.lib.homeManagerConfiguration
+          user-inputs.${hm-input-name}.lib.homeManagerConfiguration
             ((builtins.removeAttrs args [ "system" "specialArgs" ]) // {
               inherit pkgs lib;
 
@@ -204,12 +206,15 @@ in
         create-home' = home-metadata:
           let
             inherit (home-metadata) name;
+
+            # hm-input-name is supposed to be here
             overrides = homes.users.${name} or { };
           in
           {
-            "${name}" = create-home (overrides // home-metadata // {
-              modules = user-home-modules-list ++ (homes.users.${name}.modules or [ ]) ++ (homes.modules or [ ]);
-            });
+            "${name}" = create-home
+              (overrides // home-metadata // {
+                modules = user-home-modules-list ++ (homes.users.${name}.modules or [ ]) ++ (homes.modules or [ ]);
+              });
           };
 
         created-homes = foldl (homes: home-metadata: homes // (create-home' home-metadata)) { } target-homes-metadata;

@@ -5,7 +5,9 @@
 }:
 
 let
-  inherit (core-inputs.nixpkgs.lib) assertMsg foldl filterAttrs const;
+  inherit (core-inputs.nixpkgs.lib) assertMsg foldl filterAttrs const lists debug;
+  traceitN = N: val: debug.traceSeqN N val val;
+  tracemsgN = msg: N: val: builtins.trace msg (traceitN N val);
 in
 rec {
   flake = rec {
@@ -72,6 +74,7 @@ rec {
           "package-namespace"
           "alias"
           "snowfall"
+          "nixpkgsChannels"
         ];
 
     ## Transform an attribute set of inputs into an attribute set where the values are the inputs' `lib` attribute. Entries without a `lib` attribute are removed.
@@ -170,14 +173,25 @@ rec {
 
         channelsConfig = full-flake-options.channels-config or { };
 
-        channels.nixpkgs.overlaysBuilder = snowfall-lib.overlay.create-overlays-builder {
-          inherit package-namespace;
-          extra-overlays = full-flake-options.overlays or [ ];
-        };
-        channels.nixpkgs-stable.overlaysBuilder = snowfall-lib.overlay.create-overlays-builder {
-          inherit package-namespace;
-          extra-overlays = full-flake-options.overlays or [ ];
-        };
+        channels =
+          let
+            overlays-builder = snowfall-lib.overlay.create-overlays-builder {
+              inherit package-namespace;
+              extra-overlays = full-flake-options.overlays or [ ];
+            };
+          in
+          # (traceitN 2
+          (builtins.listToAttrs
+            (map
+              (channel-name: {
+                "name" = channel-name;
+                "value" = { overlaysBuilder = overlays-builder; };
+              })
+              ((full-flake-options.nixpkgsChannels or [ ]) ++ [ "nixpkgs" ])
+            ))
+          # )
+        ;
+
 
         outputsBuilder = outputs-builder;
 
